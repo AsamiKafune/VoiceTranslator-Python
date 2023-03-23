@@ -5,6 +5,7 @@ import textwrap
 from tkinter import *
 import threading
 import queue
+import time
 from voicevox import Client
 from googletrans import Translator
 from pydub import AudioSegment
@@ -20,7 +21,7 @@ SOUNDINDEX = 0 # check index sound in voicevox
 DESKTOPMIC = 3 # your desktop loopback (vb cable)
 YOURMICINDEX = 1 # your microphone
 
-TARGET_LANG='ja' 
+TARGET_LANG='en' 
 MYLANG='th'
 
 mic = sr.Microphone(YOURMICINDEX)
@@ -29,6 +30,23 @@ rec = sr.Recognizer()
 subtitle_text = "..."
 queues = queue.Queue()
 translator = Translator()
+
+class setInterval :
+    def __init__(self,interval,action) :
+        self.interval=interval
+        self.action=action
+        self.stopEvent=threading.Event()
+        thread=threading.Thread(target=self.__setInterval)
+        thread.start()
+
+    def __setInterval(self) :
+        nextTime=time.time()+self.interval
+        while not self.stopEvent.wait(nextTime-time.time()) :
+            nextTime+=self.interval
+            self.action()
+
+    def cancel(self) :
+        self.stopEvent.set()
 
 def subtitleDisplay():
     global root 
@@ -50,15 +68,14 @@ def subtitleDisplay():
     )
     subtitle_label.pack()
     root.mainloop()
+
 def subtitleUpdate():
     global subtitle_text
-    if queues:
+    if not queues.empty():
         subtitle_text = queues.get()
-        print("q:" + subtitle_text)
+        print("[Subtitle] " + subtitle_text)
         textwrap.fill(subtitle_text, 64)
-    else:
-        subtitle_text = ""
-    subtitle_label.config(text=subtitle_text)
+        subtitle_label.config(text=subtitle_text)
 def speak():
     async def createSound(text):
         async with Client() as client:
@@ -94,8 +111,8 @@ def createSubtitle():
         try:
             outputText = rec.recognize_google(audio, language=TARGET_LANG)
             _msg = translator.translate(outputText, dest=MYLANG)
+            print("[Translate Subtitle] ", "("+TARGET_LANG+") ", outputText, " ("+MYLANG+") ",_msg.text)
             queues.put(_msg.text)
-            subtitleUpdate()
         except sr.UnknownValueError:
             print("[Warn] Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
@@ -103,6 +120,7 @@ def createSubtitle():
                 "[Warn] Could not request results from Google Speech Recognition service; {0}".format(e))
         # record background
     rec.listen_in_background(sr.Microphone(DESKTOPMIC), record_callback, phrase_time_limit=2)
+    setInterval(1,subtitleUpdate)
 
 threading.Thread(target=speak, args=()).start()
 threading.Thread(target=subtitleDisplay, args=()).start()
