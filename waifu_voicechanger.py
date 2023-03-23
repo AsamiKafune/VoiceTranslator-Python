@@ -112,7 +112,7 @@ def createSubtitle():
             outputText = rec.recognize_google(audio, language=TARGET_LANG)
             _msg = translator.translate(outputText, dest=MYLANG)
             print("[Translate Subtitle] ", "("+TARGET_LANG+") ", outputText, " ("+MYLANG+") ",_msg.text)
-            queues.put(_msg.text)
+            queues.put(outputText+"\n"+_msg.text)
         except sr.UnknownValueError:
             print("[Warn] Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
