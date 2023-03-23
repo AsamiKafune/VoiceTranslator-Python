@@ -1,0 +1,10 @@
+pyaudio
+SpeechRecognition
+googletrans==3.1.0a0
+voicevox-client
+keyboard
+tkinter
+asyncio
+pydub
+queue
+threading
