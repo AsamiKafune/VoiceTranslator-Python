@@ -7,4 +7,5 @@ tkinter
 asyncio
 pydub
 queue
+time
 threading
